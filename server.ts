@@ -1,7 +1,9 @@
+import "dotenv/config";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import { GoogleGenAI } from "@google/genai";
 import { Octokit } from "octokit";
 
@@ -77,8 +79,14 @@ async function startServer() {
         });
       }
 
+      console.log("Found deleted code, calling Gemini...");
+
       // Initialize Gemini
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
+        return res.status(500).json({ error: "Gemini API key is not configured. Please add your GEMINI_API_KEY in the AI Studio Secrets panel." });
+      }
+      const ai = new GoogleGenAI({ apiKey });
       
       const prompt = `You are GitGhost, a forensic AI tool that reconstructs deleted logic from Git history.
 Analyze the following deleted code snippets from a repository.
@@ -119,7 +127,17 @@ Provide the analysis in JSON format matching this schema:
 
     } catch (error: any) {
       console.error("Analysis error:", error);
-      res.status(500).json({ error: error.message || "An error occurred during analysis" });
+      
+      let errorMessage = error.message || "An error occurred during analysis";
+      
+      // Try to parse Gemini API errors
+      if (errorMessage.includes("API key not valid")) {
+        errorMessage = "Invalid Gemini API key. Please check your Secrets panel.";
+      } else if (error.status === 403 && error.response?.data?.message?.includes("rate limit")) {
+        errorMessage = "GitHub API rate limit exceeded. Please try again later or provide a GitHub token.";
+      }
+      
+      res.status(500).json({ error: errorMessage });
     }
   });
 

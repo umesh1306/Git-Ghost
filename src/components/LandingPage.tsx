@@ -1,12 +1,12 @@
 import { motion } from 'motion/react';
-import { Github, Search, ShieldAlert, GitCommit, ArrowRight, Sparkles } from 'lucide-react';
+import { Search, ShieldAlert, GitCommit, ArrowRight, Sparkles } from 'lucide-react';
 import { signInWithPopup } from 'firebase/auth';
-import { auth, githubProvider } from '../firebase';
+import { auth, googleProvider } from '../firebase';
 
 export default function LandingPage() {
   const handleLogin = async () => {
     try {
-      await signInWithPopup(auth, githubProvider);
+      await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error("Login failed:", error);
     }
@@ -34,7 +34,6 @@ export default function LandingPage() {
           onClick={handleLogin}
           className="inline-flex items-center gap-3 bg-gradient-to-r from-cyan-500 to-purple-600 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:from-cyan-400 hover:to-purple-500 transition-all hover:scale-105 active:scale-95 shadow-[0_0_40px_-10px_rgba(34,211,238,0.6)] border border-white/10"
         >
-          <Github className="w-6 h-6" />
           Start Analyzing Ghosts
           <ArrowRight className="w-5 h-5 ml-2" />
         </button>
