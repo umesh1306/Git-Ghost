@@ -1,0 +1,5 @@
+{
+  "name": "GitGhost",
+  "description": "A forensic AI tool that reconstructs deleted logic from Git history using Gemini AI.",
+  "requestFramePermissions": []
+}

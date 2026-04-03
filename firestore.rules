@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: reports
+    // Document ID: auto-generated
+    // Fields:
+    //   - repoUrl: string (required) - The URL of the analyzed repository.
+    //   - deletedCode: string (required) - The snippet of deleted code.
+    //   - purpose: string (required) - The purpose of the deleted code.
+    //   - reasonDeleted: string (required) - The likely reason the code was deleted.
+    //   - risk: string (required) - The risk assessment of the deletion.
+    //   - userId: string (required) - The ID of the user who generated the report.
+    //   - createdAt: timestamp (required) - The time the report was generated.
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function uidUnchanged() {
+      return !('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidReport(data) {
+      return hasOnlyAllowedFields(['repoUrl', 'deletedCode', 'purpose', 'reasonDeleted', 'risk', 'userId', 'createdAt']) &&
+             data.repoUrl is string && data.repoUrl.size() > 0 && data.repoUrl.size() < 500 &&
+             data.deletedCode is string && data.deletedCode.size() < 20000 &&
+             data.purpose is string && data.purpose.size() < 5000 &&
+             data.reasonDeleted is string && data.reasonDeleted.size() < 5000 &&
+             data.risk is string && data.risk.size() < 5000 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    match /reports/{reportId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidReport(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidReport(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner();
+    }
+  }
+}
